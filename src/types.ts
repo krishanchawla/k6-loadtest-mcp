@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// Hard ceiling on how much concurrent load a generated script can ever ask for. This lives in
+// code (not the agent-writable TestPlan, and not a runtime config file) for the same reason the
+// host allowlist in guardrails.ts isn't agent-editable: an LLM-authored plan -- whether from a
+// legitimate request or a prompt-injected one -- should never be able to raise its own ceiling.
+// 1000 VUs is generous for the kind of ad-hoc/local/staging testing this tool targets; anything
+// bigger belongs in a purpose-built distributed load-testing setup, not a single k6 process.
+export const MAX_VUS = 1000;
+
 /** A single request definition in the mix. */
 export const RequestSpec = z.object({
   name: z.string().describe("Short label for this request, used in per-endpoint metrics."),
@@ -15,12 +23,21 @@ export type RequestSpec = z.infer<typeof RequestSpec>;
 
 export const Stage = z.object({
   duration: z.string().describe("e.g. '30s', '2m'"),
-  target: z.number().int().nonnegative(),
+  target: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(MAX_VUS, `A stage's target VUs can't exceed ${MAX_VUS}.`),
 });
 
 export const LoadProfile = z.object({
   type: z.enum(["constant", "ramping"]).default("constant"),
-  vus: z.number().int().positive().optional(),
+  vus: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_VUS, `vus can't exceed ${MAX_VUS}.`)
+    .optional(),
   duration: z.string().optional(),
   stages: z.array(Stage).optional(),
 });

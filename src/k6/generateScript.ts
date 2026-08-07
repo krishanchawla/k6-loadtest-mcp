@@ -67,6 +67,11 @@ function buildRequestCall(req: RequestSpec): string {
       const res = http.request(${jsStringLiteral(req.method)}, \`\${BASE_URL}${req.path}\`, ${bodyExpr}, {
         headers: ${JSON.stringify(headers)},
         tags: { name: ${jsStringLiteral(req.name)} },
+        // Guardrails only vet BASE_URL's host (see assertTargetAllowed) -- without this, a 3xx
+        // response could silently redirect load at a host that was never approved. Not following
+        // means a redirect just shows up as its own status code; set expectStatus to the 3xx code
+        // if a request is meant to test the redirect itself.
+        redirects: 0,
       });
       const ok = check(res, {
         ${checks.join(",\n        ")}

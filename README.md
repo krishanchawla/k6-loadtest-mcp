@@ -47,6 +47,16 @@ so it's in the same predictable place whether you cloned this repo, `npm install
 `npx github:<owner>/k6-loadtest-mcp`. Run artifacts (`runs/<timestamp>-<name>/script.js`, `summary.json`, ...)
 live alongside it at `~/.k6-loadtest-mcp/runs/`.
 
+Two more guardrails, both enforced in code rather than through anything a `TestPlan` (agent-authored, possibly
+prompt-injected) can control:
+
+- **VUs are capped at `MAX_VUS` (1000)** in `src/types.ts` — a plan asking for more is rejected before a script
+  is ever generated.
+- **Generated requests don't follow redirects** (`redirects: 0`). The host allowlist only vets `baseUrl`;
+  without this, a 3xx response could silently send load at a host that was never approved. A redirect just
+  shows up as its own status code — set `expectStatus` to the 3xx code if a request is meant to test the
+  redirect itself.
+
 ## Setup
 
 Prerequisites: Node.js 18+, and [k6](https://k6.io/docs/get-started/installation/) installed and on your
