@@ -1,4 +1,4 @@
-// Tiny dependency-free demo API for exercising the perf-agent pipeline end-to-end.
+// Tiny dependency-free demo API for exercising the k6-loadtest-mcp pipeline end-to-end.
 // Not meant to be realistic infra -- just enough behavior variance to produce an
 // interesting load-test report: a fast endpoint, a slower one, and one that
 // degrades (queues up) as concurrency increases, plus a low random error rate.

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { perfAgentHome } from "./lib/home.js";
+import { k6LoadtestMcpHome } from "./lib/home.js";
 
 interface Config {
   allowedHosts: string[];
@@ -9,7 +9,7 @@ interface Config {
 const DEFAULT_CONFIG: Config = { allowedHosts: ["localhost", "127.0.0.1", "::1"] };
 
 function configPath(): string {
-  return path.join(perfAgentHome(), "config.json");
+  return path.join(k6LoadtestMcpHome(), "config.json");
 }
 
 function loadConfig(): Config {

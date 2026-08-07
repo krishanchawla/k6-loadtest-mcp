@@ -76,7 +76,7 @@ server.registerTool(
     title: "Run the full k6 load test",
     description:
       "Executes the load test at the VUs/duration/stages baked into the generated script by generate_k6_script. " +
-      "Only runs against hosts listed in perf-agent.config.json's allowedHosts -- add a host there yourself " +
+      "Only runs against hosts listed in ~/.k6-loadtest-mcp/config.json's allowedHosts -- add a host there yourself " +
       "(the tools won't do it for you) once you've confirmed you're authorized to load-test it. " +
       "Can take as long as the test's own duration/stages; call smoke_test_script first.",
     inputSchema: { runDir: z.string().describe("runDir returned by generate_k6_script") },

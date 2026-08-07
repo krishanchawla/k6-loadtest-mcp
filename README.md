@@ -32,7 +32,7 @@ the script between steps or re-run without regenerating.
 
 ## Guardrail
 
-Load tests only run against hosts listed in `~/.perf-agent/config.json`'s `allowedHosts`
+Load tests only run against hosts listed in `~/.k6-loadtest-mcp/config.json`'s `allowedHosts`
 (`localhost`/`127.0.0.1` by default — the file is created automatically on first run). **The tools cannot
 expand this list themselves** — hitting a host you don't control or aren't authorized to test can look like
 a denial-of-service attack. Add a host yourself, by hand, once you've confirmed you're authorized to
@@ -42,10 +42,10 @@ load-test it:
 { "allowedHosts": ["localhost", "127.0.0.1", "staging.myapp.example.com"] }
 ```
 
-This lives under your home directory (override with `PERF_AGENT_HOME`), not inside the installed package —
+This lives under your home directory (override with `K6_LOADTEST_MCP_HOME`), not inside the installed package —
 so it's in the same predictable place whether you cloned this repo, `npm install`ed it, or ran it via
 `npx github:<owner>/k6-loadtest-mcp`. Run artifacts (`runs/<timestamp>-<name>/script.js`, `summary.json`, ...)
-live alongside it at `~/.perf-agent/runs/`.
+live alongside it at `~/.k6-loadtest-mcp/runs/`.
 
 ## Setup
 

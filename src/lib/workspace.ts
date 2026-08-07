@@ -1,10 +1,10 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import type { TestPlan } from "../types.js";
-import { perfAgentHome } from "./home.js";
+import { k6LoadtestMcpHome } from "./home.js";
 
 // Deliberately under the user's home, not the installed package dir -- see home.ts for why.
-const RUNS_ROOT = path.join(perfAgentHome(), "runs");
+const RUNS_ROOT = path.join(k6LoadtestMcpHome(), "runs");
 
 function slugify(s: string): string {
   return s
