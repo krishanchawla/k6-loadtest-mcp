@@ -117,19 +117,36 @@ npm run harness          # in another terminal: generates a script, smoke-tests,
 
 ### Register with Claude Desktop / Claude Code
 
-Add to your MCP config (Claude Desktop: `claude_desktop_config.json`; Claude Code: `.mcp.json` or
-`claude mcp add`):
+**Claude Code**, from a terminal (not inside a chat — there's no `/mcp add` slash command):
+
+```bash
+claude mcp add k6-loadtest-mcp -- node /absolute/path/to/k6-loadtest-mcp/dist/index.js
+```
+
+The command *after* `--` is what actually gets run — it must be `node <path-to-dist/index.js>`, not
+just the path on its own (`claude mcp add k6-loadtest-mcp dist/index.js` without `node`/`--` doesn't
+work; `claude` needs a real executable as `<commandOrUrl>`, not a script path). If you'll also want
+the [dashboard](#dashboard) later, `-e` sets env vars on the server at registration time — the
+reliable way to do it, see the note in [Pointing the MCP server at it](#pointing-the-mcp-server-at-it):
+
+```bash
+claude mcp add k6-loadtest-mcp -e K6_LOADTEST_DASHBOARD_TOKEN=<token> -- node /absolute/path/to/k6-loadtest-mcp/dist/index.js
+```
+
+**Claude Desktop**, edit `claude_desktop_config.json` directly:
 
 ```json
 {
   "mcpServers": {
     "k6-loadtest-mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/k6-loadtest-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/k6-loadtest-mcp/dist/index.js"],
+      "env": { "K6_LOADTEST_DASHBOARD_TOKEN": "<token>" }
     }
   }
 }
 ```
+(the `env` block is only needed if you're using the dashboard — omit it otherwise)
 
 Or, once it's on a public GitHub repo, skip the local build entirely:
 
@@ -143,6 +160,12 @@ Or, once it's on a public GitHub repo, skip the local build entirely:
   }
 }
 ```
+
+**Either way, fully quit and restart Claude Desktop/Claude Code after registering or changing this**
+— it spawns the MCP server once at startup and doesn't notice config or environment changes made
+afterward. Retrying in the same conversation, or setting an env var in some other terminal window,
+won't reach the already-running server; this bites people (it bit me while building this) far more
+often than it should.
 
 Then, in conversation: describe your API (or paste a few example `curl` commands), say what load profile you
 want, and ask it to run and summarize a load test. The host LLM builds the structured `TestPlan` and drives
@@ -215,14 +238,19 @@ what that means). Point your own `k6-loadtest-mcp` at it:
    ```json
    { "allowedHosts": ["localhost", "127.0.0.1", "playground.krishanchawla.com"] }
    ```
-2. Add the dashboard URL to that same file, and set the publish token as an env var on whatever
-   launches your MCP server:
+2. Add the dashboard URL to that same file:
    ```json
    { "dashboardUrl": "https://projects.krishanchawla.com/loadtest-dashboard" }
    ```
+   Then set the publish token **on the MCP server's own registration**, not as a plain shell env
+   var — see [Register with Claude Desktop / Claude Code](#register-with-claude-desktop--claude-code)
+   for why that distinction matters. For Claude Code, either re-add the server with `-e`:
    ```bash
-   K6_LOADTEST_DASHBOARD_TOKEN=0057371de9d3096616e06cd56a0872ae
+   claude mcp add k6-loadtest-mcp -e K6_LOADTEST_DASHBOARD_TOKEN=0057371de9d3096616e06cd56a0872ae -- node /absolute/path/to/k6-loadtest-mcp/dist/index.js
    ```
+   or add `"env": { "K6_LOADTEST_DASHBOARD_TOKEN": "0057371de9d3096616e06cd56a0872ae" }` to its entry
+   in `.mcp.json`/`claude_desktop_config.json` directly. **Fully restart Claude Code/Desktop after
+   this** — same reason as above, the running server won't pick it up otherwise.
    (Yes, that token is intentionally in this README — public demo mode's real guard is the pinned
    target, not the token; see the section linked above.)
 3. Ask Claude to load test the playground's auth-token endpoint, e.g.:
@@ -328,8 +356,15 @@ Once deployed, two settings on the machine(s) running `k6-loadtest-mcp`:
 - `dashboardUrl` in `~/.k6-loadtest-mcp/config.json` (same file `allowedHosts` lives in) — the
   dashboard's `DASHBOARD_PUBLIC_BASE_URL`, e.g. `"dashboardUrl": "https://loadtest.yourdomain.com"`.
   Not set by default; nothing is ever sent anywhere until you add it yourself.
-- `K6_LOADTEST_DASHBOARD_TOKEN` env var — must match `DASHBOARD_API_TOKEN`. Kept out of
-  `config.json` deliberately, since it's a secret and that file isn't.
+- `K6_LOADTEST_DASHBOARD_TOKEN` — must match `DASHBOARD_API_TOKEN`. Kept out of `config.json`
+  deliberately, since it's a secret and that file isn't. **Set this on the MCP server's own
+  registration** (`claude mcp add ... -e K6_LOADTEST_DASHBOARD_TOKEN=...`, or an `"env"` block in
+  `.mcp.json`/`claude_desktop_config.json` — see
+  [Register with Claude Desktop / Claude Code](#register-with-claude-desktop--claude-code)), not as
+  a plain shell/session env var. The server reads it once at startup; a variable set afterward in
+  some other terminal, or "just retry" in the same conversation, never reaches the already-running
+  process. This is the single most common way people (including while building this) get stuck here
+  — if `publish_report` keeps saying the token isn't set after you're sure you set it, this is why.
 
 With both set, `run_full_test`'s response includes `dashboardConfigured: true` — Claude is instructed
 to ask before publishing, not do it automatically, since a run's data becomes visible on whatever

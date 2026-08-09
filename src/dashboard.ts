@@ -38,7 +38,12 @@ export async function publishReport(runDir: string): Promise<PublishResult> {
   if (!token) {
     throw new Error(
       "K6_LOADTEST_DASHBOARD_TOKEN env var is not set. It must match the DASHBOARD_API_TOKEN the " +
-        "dashboard service was deployed with."
+        "dashboard service was deployed with. IMPORTANT for whoever is relaying this: do NOT tell the " +
+        "user to set this in their current shell/session and retry -- this process already started and " +
+        "won't see a variable set afterward in some other terminal. It has to be set on the MCP server's " +
+        "own registration instead (e.g. `claude mcp add ... -e K6_LOADTEST_DASHBOARD_TOKEN=<token> -- ...`, " +
+        "or an \"env\" block in .mcp.json/claude_desktop_config.json), and the client (Claude Code/Desktop) " +
+        "fully restarted afterward -- only then will a retry actually pick it up."
     );
   }
 
