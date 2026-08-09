@@ -1,34 +1,70 @@
+<div align="center">
+
 # k6-loadtest-mcp
 
-Describe an API in plain English (or point at example requests), and this MCP server turns that into a
-runnable [k6](https://k6.io) load test, runs it, and hands back structured, deterministic metrics
-(p50/p90/p95/p99 latency, error rate, RPS, per-endpoint breakdown, threshold pass/fail) for the host LLM
-(Claude Desktop / Claude Code) to turn into a human-readable performance report.
+### Describe an API in plain English. Get a runnable k6 load test, executed and reported.
+
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-8680FF?style=flat-square&logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-8680FF?style=flat-square&logo=typescript&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-Server-8680FF?style=flat-square)
+![k6](https://img.shields.io/badge/k6-Load%20Testing-8680FF?style=flat-square&logo=k6&logoColor=white)
+
+**[Pipeline](#pipeline) · [Guardrail](#guardrail) · [Setup](#setup) · [Tools](#tools) · [Dashboard](#dashboard) · [Try it live](#try-the-live-public-demo)**
+
+</div>
+
+This MCP server turns a plain-English API description (or a few example requests) into a runnable
+[k6](https://k6.io) load test, runs it, and hands back structured, deterministic metrics — p50/p90/p95/p99
+latency, error rate, RPS, per-endpoint breakdown, threshold pass/fail — for the host LLM (Claude Desktop /
+Claude Code) to turn into a human-readable performance report.
 
 It's an MCP server, not a standalone CLI: the "understanding what to test" step is done by whichever
 Claude client you're using (no separate API key needed), and this server does the mechanical, deterministic
 parts — script generation, execution, and result parsing — in code, so the numbers in the report are computed,
 not guessed by an LLM eyeballing a log.
 
+<details>
+<summary><b>Example</b> — what asking for this looks like in conversation</summary>
+<br>
+
+```
+You:    Load test my /checkout endpoint — ramp up to 50 concurrent users over 30s,
+        fail me if p95 goes over 250ms.
+
+Claude: Generated script.js, smoke-tested it (1 VU, clean), ran the full load profile...
+
+        p95: 187ms   error rate: 0.2%   312 req/s   ✅ all thresholds passed
+
+        Latency stayed well under budget through the ramp. The one failure was a
+        single timeout at peak concurrency — worth a look if it recurs.
+```
+
+Illustrative — actual output depends on the API under test and the `TestPlan` the host LLM builds.
+
+</details>
+
 ## Pipeline
 
-```
-you describe the API / paste example requests
-        │  (host LLM turns this into a structured TestPlan)
-        ▼
-generate_k6_script   → deterministic templating, reviewable script.js
-        ▼
-smoke_test_script    → 1 VU / 1 iteration, catches syntax/runtime errors fast
-        ▼
-run_load_test        → full run at the VUs/duration/stages baked into the script
-        ▼
-get_test_metrics     → k6's summary.json parsed into structured RunMetrics
-        ▼
-host LLM writes the narrative report from those structured metrics
+```mermaid
+flowchart TD
+    A["You describe the API<br/>(plain English or example requests)"] --> B["Host LLM builds a<br/>structured TestPlan"]
+    B --> C["generate_k6_script<br/>deterministic templating → reviewable script.js"]
+    C --> D["smoke_test_script<br/>1 VU / 1 iteration — catches errors fast"]
+    D --> E["run_load_test<br/>full run at the script's baked-in load profile"]
+    E --> F["get_test_metrics<br/>summary.json → structured RunMetrics"]
+    F --> G["Host LLM writes the<br/>narrative report"]
+    F -. optional .-> H["publish_report<br/>→ shared dashboard"]
+
+    G1["Guardrails: host allowlist,<br/>MAX_VUS cap, no redirects"]
+    C -. enforced before generation .-> G1
+
+    style G1 fill:#8680FF,color:#fff,stroke:#333
+    style H stroke-dasharray: 4 3
 ```
 
-`run_full_test` chains all four steps in one call for convenience; the granular tools let you inspect/adjust
-the script between steps or re-run without regenerating.
+`run_full_test` chains generate → smoke → run → parse in one call for convenience (and auto-publishes
+to the dashboard if one's configured); the granular tools let you inspect/adjust the script between
+steps or re-run without regenerating.
 
 ## Guardrail
 
@@ -120,6 +156,7 @@ the four tools below.
 | `run_load_test` | Full run at the script's baked-in load profile |
 | `get_test_metrics` | Parsed `summary.json` → structured `RunMetrics` |
 | `run_full_test` | All of the above chained, given a `TestPlan` |
+| `publish_report` | Publishes a run's metrics to a deployed [dashboard](#dashboard), returns a shareable URL |
 
 ### TestPlan shape
 
@@ -144,6 +181,158 @@ the four tools below.
 
 See `src/types.ts` for the full zod schema (also what the MCP client sees as the tool's input schema).
 
+## Dashboard
+
+By default, a report is whatever the host LLM types into the chat — useful in the moment, gone once
+the conversation scrolls. `dashboard/` is an optional Spring Boot + Thymeleaf app you deploy once
+(separately from the MCP server, not spawned by it) that your test runs get published to, giving you
+a real, shareable URL instead. Every run also gets compared against the previous run of the same test
+`name`, so latency/error-rate/RPS regressions show up automatically on the report page — no
+separate baseline step.
+
+It is **not required** — everything above works with zero dashboard configured, `publish_report`
+just has nothing to publish to.
+
+<p align="center">
+  <img src="docs/screenshot-list.jpg" width="49%" alt="Dashboard run list" />
+  <img src="docs/screenshot-detail.jpg" width="49%" alt="Dashboard run detail with trend delta" />
+</p>
+
+Screenshots from the live public demo below — that run list is real, published by an actual
+`run_full_test` call against a real API, not staged. Deploying your own private instance (further
+down) works exactly the same way, just gated behind your own login instead of open to the internet.
+
+### Try the live public demo
+
+There's a real instance running at **[projects.krishanchawla.com/loadtest-dashboard](https://projects.krishanchawla.com/loadtest-dashboard/)**
+— open to read without a login, and open to publish to as well, pinned to one target so it can't be
+used as a general-purpose load-testing egress point (see [Public demo mode](#public-demo-mode) for
+what that means). Point your own `k6-loadtest-mcp` at it:
+
+1. Add `playground.krishanchawla.com` to `allowedHosts` in your own `~/.k6-loadtest-mcp/config.json`
+   (the guardrail can't add this for you — see [Guardrail](#guardrail)):
+   ```json
+   { "allowedHosts": ["localhost", "127.0.0.1", "playground.krishanchawla.com"] }
+   ```
+2. Add the dashboard URL to that same file, and set the publish token as an env var on whatever
+   launches your MCP server:
+   ```json
+   { "dashboardUrl": "https://projects.krishanchawla.com/loadtest-dashboard" }
+   ```
+   ```bash
+   K6_LOADTEST_DASHBOARD_TOKEN=0057371de9d3096616e06cd56a0872ae
+   ```
+   (Yes, that token is intentionally in this README — public demo mode's real guard is the pinned
+   target, not the token; see the section linked above.)
+3. Ask Claude to load test the playground's auth-token endpoint, e.g.:
+   > Load test `POST https://playground.krishanchawla.com/api/scenarios/api-auth/token` with body
+   > `{"username": "standard_user", "password": "Password123!"}`, ramp to 20 users over 20s.
+4. `run_full_test` publishes automatically — you'll get back a real
+   `projects.krishanchawla.com/loadtest-dashboard/runs/{id}` link, live for anyone to open.
+
+Published runs are pruned after 3 days — it's a demo, not permanent storage. Only
+`playground.krishanchawla.com` is accepted as a target; anything else gets a `403`.
+
+### Deploying the dashboard
+
+`dashboard/` is a self-contained Spring Boot jar (its own embedded server) — not a WAR dropped into
+an existing Tomcat, even if you already run one. Modern Spring Boot targets Jakarta EE (`jakarta.*`),
+which only deploys onto Tomcat 10+; Tomcat 9-and-older (`javax.*`) can't load it at all, and the last
+Spring Boot version that could is 2.7.x, EOL since Nov 2023 — not worth it for a publicly reachable
+service. Embedding its own server sidesteps the mismatch entirely and leaves any existing Tomcat
+untouched.
+
+```bash
+cd dashboard
+mvn -q package                 # -> target/loadtest-dashboard.jar
+```
+
+Run it (e.g. via systemd) with these env vars set:
+
+| Env var | Required | Purpose |
+|---|---|---|
+| `DASHBOARD_API_TOKEN` | yes, to accept reports | Bearer token `publish_report` must send. Ingest returns 503 until this is set. No hardcoded fallback — leaving it unset doesn't silently open the endpoint, it disables it. |
+| `DASHBOARD_BASIC_AUTH_USER` / `DASHBOARD_BASIC_AUTH_PASS` | no | HTTP Basic credentials guarding every page except `/api/**`. Set both → private, gated dashboard (the default posture, and what you want for your own/your team's real data). Leave `DASHBOARD_BASIC_AUTH_PASS` unset → reads are public — this is the deliberate [public demo mode](#public-demo-mode) posture, not a fallback-open bug. |
+| `DASHBOARD_PUBLIC_BASE_URL` | yes, for correct links | The externally visible base URL (e.g. `https://loadtest.yourdomain.com`), used to build the shareable links `publish_report` returns. |
+| `DASHBOARD_PORT` | no (default `8080`) | Port the embedded server listens on. |
+| `DASHBOARD_DATA_DIR` | no (default `~/.k6-loadtest-mcp/dashboard`) | Where the H2 database file lives. |
+| `DASHBOARD_DEMO_TARGET_HOST` | no | [Public demo mode](#public-demo-mode) only — pins accepted `baseUrl`s to one host\[:port\]. Unset = any target accepted (the private-use default). |
+| `DASHBOARD_RETENTION_DAYS` | no (default `0` = off) | [Public demo mode](#public-demo-mode) only — auto-deletes runs older than N days, daily. `0`/unset = keep forever (the private-use default). |
+
+```bash
+# example systemd ExecStart -- private/team dashboard (default posture)
+DASHBOARD_API_TOKEN=... DASHBOARD_BASIC_AUTH_USER=admin DASHBOARD_BASIC_AUTH_PASS=... \
+DASHBOARD_PUBLIC_BASE_URL=https://loadtest.yourdomain.com \
+java -jar /opt/loadtest-dashboard/loadtest-dashboard.jar
+```
+
+Point your existing nginx at it with one `location`/`proxy_pass` block to `127.0.0.1:8080` (or
+whichever `DASHBOARD_PORT`) — no other nginx changes needed for this posture.
+
+### Public demo mode
+
+The default posture above (Basic Auth required, any `baseUrl` accepted, nothing pruned) is right for
+your own or your team's real data. It is **not** meant for "clone the repo, point it at my dashboard,
+anyone can see it" — once `DASHBOARD_API_TOKEN` is published (e.g. in this README), it's not a secret
+anymore, and an unrestricted ingest endpoint becomes an anonymous load-testing egress point, not just a
+spam nuisance.
+
+Public demo mode trades the login for a narrower, self-limiting deployment: reads are open, but writes
+are pinned to one fixed target — visitors get the real workflow (their own load test, their own report,
+visible without a login) without being able to point your server at arbitrary hosts.
+
+```bash
+# example systemd ExecStart -- public demo, pinned to one trusted target
+DASHBOARD_API_TOKEN=... \
+DASHBOARD_PUBLIC_BASE_URL=https://projects.yourdomain.com \
+DASHBOARD_DEMO_TARGET_HOST=your-safe-target.yourdomain.com \
+DASHBOARD_RETENTION_DAYS=3 \
+java -jar /opt/loadtest-dashboard/loadtest-dashboard.jar
+# DASHBOARD_BASIC_AUTH_PASS deliberately not set
+```
+
+Two more things this posture needs that the default doesn't:
+
+1. **Pick one target you're certain can take anonymous concurrent traffic**, and point
+   `DASHBOARD_DEMO_TARGET_HOST` at it. Two ways to get one: deploy `demo/demo-api.mjs` (bundled with
+   this repo — in-memory, no real data, built for exactly this) on your own box, or reuse an existing
+   sandbox you already control, the way [the live demo above](#try-the-live-public-demo) pins to
+   `playground.krishanchawla.com` — a practice API sandbox that already existed, not something stood
+   up just for this. Either way, `DASHBOARD_DEMO_TARGET_HOST` checks host (and port, if given) only,
+   not path — pinning to a host opens *everything* currently (and later) served from it, not just the
+   one endpoint you had in mind.
+2. **Rate-limit and cap the ingest endpoint at the nginx layer** — the in-app payload check
+   (`ApiTokenFilter`) only catches requests that send a `Content-Length` header; nginx enforces it
+   properly regardless of encoding, and rate limiting isn't something to reinvent in application code
+   when the reverse proxy already does it well:
+
+   ```nginx
+   limit_req_zone $binary_remote_addr zone=dashboard_ingest:10m rate=5r/m;
+
+   location /api/runs {
+       limit_req zone=dashboard_ingest burst=5 nodelay;
+       client_max_body_size 64k;
+       proxy_pass http://127.0.0.1:8080;
+   }
+   ```
+
+The bearer token still guards against casual/accidental hits, but in this mode `DASHBOARD_DEMO_TARGET_HOST`
+is the real defense, not the token — treat it as public once it's in this README.
+
+### Pointing the MCP server at it
+
+Once deployed, two settings on the machine(s) running `k6-loadtest-mcp`:
+
+- `dashboardUrl` in `~/.k6-loadtest-mcp/config.json` (same file `allowedHosts` lives in) — the
+  dashboard's `DASHBOARD_PUBLIC_BASE_URL`, e.g. `"dashboardUrl": "https://loadtest.yourdomain.com"`.
+  Not set by default; nothing is ever sent anywhere until you add it yourself.
+- `K6_LOADTEST_DASHBOARD_TOKEN` env var — must match `DASHBOARD_API_TOKEN`. Kept out of
+  `config.json` deliberately, since it's a secret and that file isn't.
+
+With both set, `run_full_test` publishes automatically (best-effort — a misconfigured or unreachable
+dashboard is reported back as `dashboard: { published: false, reason }`, it never fails the test
+run itself). Call `publish_report` directly to (re-)publish a run driven through the granular tools.
+
 ## Notes on k6's summary JSON (v2.1.0, verified by inspection)
 
 - Trend metrics (latencies): `avg/min/med/max/p(90)/p(95)`. `p(99)` is **not** included by default — the
@@ -165,7 +354,19 @@ See `src/types.ts` for the full zod schema (also what the MCP client sees as the
   thin agent loop on top.
 - **JMeter export** — k6 is the primary engine (LLM-friendly JS, clean JSON output); a JMX export path could
   be added via `openapi-generator`'s JMeter backend for orgs standardized on JMeter.
-- **Baseline diffing** — compare a run's `RunMetrics` against a saved baseline to flag regressions, for a CI
-  gate.
 - **OpenAPI/Postman ingestion** — deriving the request mix automatically from a spec instead of the host LLM
   inferring it from a description.
+- **CI-gate baseline diffing** — the [dashboard](#dashboard) already diffs each run against the previous run
+  of the same test `name` for human viewing; failing a CI job on regression would need `publish_report`'s
+  response (or a new dashboard endpoint) surfaced as a pass/fail exit code.
+- **Auth token chaining** — `TestPlan` models a weighted mix of *independent* requests; there's no way to
+  fetch a token in one request and reuse it in a later one, so anything needing a login step first (most
+  real APIs) only works if you paste in a long-lived static token via `headers`. Found concretely while
+  picking a target for the public demo above — `playground.krishanchawla.com`'s auth-flow sandbox needs
+  exactly this and can't be fully exercised yet.
+
+---
+
+<div align="center">
+<sub>Built by <a href="https://github.com/krishanchawla">Krishan Chawla</a> · <a href="https://krishanchawla.com">krishanchawla.com</a></sub>
+</div>

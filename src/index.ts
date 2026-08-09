@@ -9,6 +9,7 @@ import { smokeTestScript, runLoadTest } from "./k6/runK6.js";
 import { parseK6Summary } from "./k6/parseSummary.js";
 import { createRunDir, writeScript, writePlan, readPlan, scriptPathFor } from "./lib/workspace.js";
 import { assertTargetAllowed } from "./guardrails.js";
+import { publishReport } from "./dashboard.js";
 
 const server = new McpServer({ name: "k6-loadtest-mcp", version: "0.1.0" });
 
@@ -122,6 +123,29 @@ server.registerTool(
 );
 
 server.registerTool(
+  "publish_report",
+  {
+    title: "Publish a run's report to the dashboard",
+    description:
+      "Sends a completed run's structured metrics to a deployed loadtest-dashboard instance (see " +
+      "dashboard/), and returns the URL of the resulting report page for sharing. Requires " +
+      "\"dashboardUrl\" set in ~/.k6-loadtest-mcp/config.json and the K6_LOADTEST_DASHBOARD_TOKEN " +
+      "env var -- neither is configured by default, so this is opt-in. run_full_test already calls " +
+      "this automatically (best-effort) when a dashboard is configured; call it directly to " +
+      "(re-)publish a specific run, e.g. one driven through the granular tools instead.",
+    inputSchema: { runDir: z.string().describe("runDir returned by generate_k6_script, after run_load_test has completed") },
+  },
+  async ({ runDir }) => {
+    try {
+      const result = await publishReport(runDir);
+      return ok(result);
+    } catch (err) {
+      return fail(err);
+    }
+  }
+);
+
+server.registerTool(
   "run_full_test",
   {
     title: "Generate, smoke-test, run, and summarize a load test in one call",
@@ -152,11 +176,23 @@ server.registerTool(
       const run = await runLoadTest(scriptPath, runDir);
       const metrics = parseK6Summary(run.summaryPath, plan);
 
+      // Best-effort: publishing is a bonus on top of a completed test run, not a requirement of
+      // one. A missing dashboardUrl (the default) or an unreachable/misconfigured dashboard must
+      // never fail the test run itself -- just report why it wasn't published.
+      let dashboard: { published: boolean; url?: string; reason?: string };
+      try {
+        const published = await publishReport(runDir);
+        dashboard = { published: true, url: published.url };
+      } catch (err) {
+        dashboard = { published: false, reason: err instanceof Error ? err.message : String(err) };
+      }
+
       return ok({
         runDir,
         stage: "complete",
         thresholdsFailed: run.thresholdsFailed,
         metrics,
+        dashboard,
       });
     } catch (err) {
       return fail(err);

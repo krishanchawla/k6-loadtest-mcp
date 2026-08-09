@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>loadtest-dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect x='1' y='9' width='4' height='8' rx='1' fill='%232a78d6'/%3E%3Crect x='7' y='4' width='4' height='13' rx='1' fill='%232a78d6'/%3E%3Crect x='13' y='1' width='4' height='16' rx='1' fill='%232a78d6'/%3E%3C/svg%3E"/>
+  <link rel="stylesheet" th:href="@{/css/dashboard.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: header}"></div>
+
+<main class="container">
+  <div class="overview-strip">
+    <div class="stat-tile">
+      <div class="label">Runs published</div>
+      <div class="value" th:text="${totalRuns}"></div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Tests tracked</div>
+      <div class="value" th:text="${testCount}"></div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Pass rate</div>
+      <div class="value" th:text="${passRatePct != null ? passRatePct + '%' : '—'}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Runs</h2>
+
+    <form class="filters" method="get" th:action="@{/}">
+      <label for="name-filter">Test</label>
+      <select id="name-filter" name="name" onchange="this.form.submit()">
+        <option value="" th:selected="${selectedName == null or selectedName == ''}">All tests</option>
+        <option th:each="n : ${testNames}" th:value="${n}" th:text="${n}" th:selected="${n == selectedName}"></option>
+      </select>
+    </form>
+
+    <div th:if="${runs.empty}" class="empty-state">
+      No runs published yet. Run <code>publish_report</code> (or <code>run_full_test</code> with a
+      dashboard configured) from k6-loadtest-mcp to see one here.
+    </div>
+
+    <div class="table-scroll" th:unless="${runs.empty}">
+      <table>
+        <thead>
+        <tr>
+          <th>Test</th>
+          <th>Started</th>
+          <th>p95</th>
+          <th>Error rate</th>
+          <th>RPS</th>
+          <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="run-row" th:each="run : ${runs.content}"
+            th:classappend="${run.thresholdsPassed ? 'status-good' : 'status-critical'}">
+          <td><a th:href="@{/runs/{id}(id=${run.id})}" th:text="${run.name}"></a></td>
+          <td class="run-time">
+            <span class="relative" th:text="${run.startedAtRelative}"></span>
+            <span class="absolute" th:text="${run.startedAtDisplay}"></span>
+          </td>
+          <td th:text="${run.p95Ms != null ? #numbers.formatDecimal(run.p95Ms, 1, 1) + ' ms' : '—'}"></td>
+          <td th:text="${#numbers.formatDecimal(run.errorRatePct, 1, 2) + '%'}"></td>
+          <td th:text="${#numbers.formatDecimal(run.rps, 1, 1)}"></td>
+          <td>
+            <span th:if="${run.thresholdsPassed}" class="badge good">✓ passed</span>
+            <span th:unless="${run.thresholdsPassed}" class="badge critical">✗ failed</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" th:if="${runs.totalPages > 1}">
+      <a th:if="${runs.hasPrevious()}"
+         th:href="@{/(name=${selectedName}, page=${runs.number - 1})}">← Newer</a>
+      <span th:text="${'Page ' + (runs.number + 1) + ' of ' + runs.totalPages}"></span>
+      <a th:if="${runs.hasNext()}"
+         th:href="@{/(name=${selectedName}, page=${runs.number + 1})}">Older →</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>
