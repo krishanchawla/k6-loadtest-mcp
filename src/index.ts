@@ -9,7 +9,7 @@ import { smokeTestScript, runLoadTest } from "./k6/runK6.js";
 import { parseK6Summary } from "./k6/parseSummary.js";
 import { createRunDir, writeScript, writePlan, readPlan, scriptPathFor } from "./lib/workspace.js";
 import { assertTargetAllowed } from "./guardrails.js";
-import { publishReport } from "./dashboard.js";
+import { publishReport, isDashboardConfigured } from "./dashboard.js";
 
 const server = new McpServer({ name: "k6-loadtest-mcp", version: "0.1.0" });
 
@@ -130,9 +130,11 @@ server.registerTool(
       "Sends a completed run's structured metrics to a deployed loadtest-dashboard instance (see " +
       "dashboard/), and returns the URL of the resulting report page for sharing. Requires " +
       "\"dashboardUrl\" set in ~/.k6-loadtest-mcp/config.json and the K6_LOADTEST_DASHBOARD_TOKEN " +
-      "env var -- neither is configured by default, so this is opt-in. run_full_test already calls " +
-      "this automatically (best-effort) when a dashboard is configured; call it directly to " +
-      "(re-)publish a specific run, e.g. one driven through the granular tools instead.",
+      "env var -- neither is configured by default, so this is opt-in. Publishing sends this run's " +
+      "data to that dashboard, which may be readable by others (see the dashboard's own access " +
+      "posture) -- ask the user before calling this, don't call it just because a dashboard happens " +
+      "to be configured. run_full_test's response includes a dashboardConfigured flag precisely so " +
+      "you know when it's worth asking.",
     inputSchema: { runDir: z.string().describe("runDir returned by generate_k6_script, after run_load_test has completed") },
   },
   async ({ runDir }) => {
@@ -152,7 +154,9 @@ server.registerTool(
     description:
       "Convenience tool that chains generate_k6_script -> smoke_test_script -> run_load_test -> get_test_metrics. " +
       "Use the granular tools instead when you want to inspect/adjust the script between steps, or re-run the " +
-      "same script with different load without regenerating it.",
+      "same script with different load without regenerating it. The response includes a dashboardConfigured " +
+      "flag -- if true, ask the user whether they'd like this run published to their dashboard before calling " +
+      "publish_report; don't publish automatically just because it's configured.",
     inputSchema: { plan: TestPlan },
   },
   async ({ plan }) => {
@@ -176,23 +180,15 @@ server.registerTool(
       const run = await runLoadTest(scriptPath, runDir);
       const metrics = parseK6Summary(run.summaryPath, plan);
 
-      // Best-effort: publishing is a bonus on top of a completed test run, not a requirement of
-      // one. A missing dashboardUrl (the default) or an unreachable/misconfigured dashboard must
-      // never fail the test run itself -- just report why it wasn't published.
-      let dashboard: { published: boolean; url?: string; reason?: string };
-      try {
-        const published = await publishReport(runDir);
-        dashboard = { published: true, url: published.url };
-      } catch (err) {
-        dashboard = { published: false, reason: err instanceof Error ? err.message : String(err) };
-      }
-
+      // Doesn't auto-publish -- ask the user first (see this tool's description). Just surfaces
+      // whether a dashboard is even configured, so the host LLM knows whether there's anything to
+      // offer; publish_report is a separate, deliberate call once the user says yes.
       return ok({
         runDir,
         stage: "complete",
         thresholdsFailed: run.thresholdsFailed,
         metrics,
-        dashboard,
+        dashboardConfigured: isDashboardConfigured(),
       });
     } catch (err) {
       return fail(err);

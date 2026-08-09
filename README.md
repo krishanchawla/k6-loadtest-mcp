@@ -62,8 +62,9 @@ flowchart TD
     style H stroke-dasharray: 4 3
 ```
 
-`run_full_test` chains generate → smoke → run → parse in one call for convenience (and auto-publishes
-to the dashboard if one's configured); the granular tools let you inspect/adjust the script between
+`run_full_test` chains generate → smoke → run → parse in one call for convenience (and flags whether
+a dashboard is configured, so Claude can ask before publishing — see [Dashboard](#dashboard)); the
+granular tools let you inspect/adjust the script between
 steps or re-run without regenerating.
 
 ## Guardrail
@@ -227,7 +228,8 @@ what that means). Point your own `k6-loadtest-mcp` at it:
 3. Ask Claude to load test the playground's auth-token endpoint, e.g.:
    > Load test `POST https://playground.krishanchawla.com/api/scenarios/api-auth/token` with body
    > `{"username": "standard_user", "password": "Password123!"}`, ramp to 20 users over 20s.
-4. `run_full_test` publishes automatically — you'll get back a real
+4. Claude will notice a dashboard is configured and ask if you want this run published — say yes
+   (or just ask directly) and you'll get back a real
    `projects.krishanchawla.com/loadtest-dashboard/runs/{id}` link, live for anyone to open.
 
 Published runs are pruned after 3 days — it's a demo, not permanent storage. Only
@@ -329,9 +331,11 @@ Once deployed, two settings on the machine(s) running `k6-loadtest-mcp`:
 - `K6_LOADTEST_DASHBOARD_TOKEN` env var — must match `DASHBOARD_API_TOKEN`. Kept out of
   `config.json` deliberately, since it's a secret and that file isn't.
 
-With both set, `run_full_test` publishes automatically (best-effort — a misconfigured or unreachable
-dashboard is reported back as `dashboard: { published: false, reason }`, it never fails the test
-run itself). Call `publish_report` directly to (re-)publish a run driven through the granular tools.
+With both set, `run_full_test`'s response includes `dashboardConfigured: true` — Claude is instructed
+to ask before publishing, not do it automatically, since a run's data becomes visible on whatever
+that dashboard's own access posture is (see [public demo mode](#public-demo-mode) vs. the private
+default above). Call `publish_report` directly yourself at any point to (re-)publish a specific run,
+including one driven through the granular tools instead of `run_full_test`.
 
 ## Notes on k6's summary JSON (v2.1.0, verified by inspection)
 

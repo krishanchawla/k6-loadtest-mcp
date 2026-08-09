@@ -8,6 +8,17 @@ export interface PublishResult {
 }
 
 /**
+ * Whether a dashboard is configured at all -- used by run_full_test to decide whether to mention
+ * publishing is available, without actually publishing. Doesn't check the token: an unset
+ * dashboardUrl means "no dashboard, don't bring it up"; an unset token with a set dashboardUrl is a
+ * misconfiguration that should surface as publish_report's own clear error if the user says yes.
+ */
+export function isDashboardConfigured(): boolean {
+  const { dashboardUrl } = loadConfig();
+  return !!dashboardUrl;
+}
+
+/**
  * Publishes a completed run's metrics to a deployed loadtest-dashboard instance (see dashboard/).
  * Requires:
  *   - "dashboardUrl" set in ~/.k6-loadtest-mcp/config.json (not set by default -- publishing is
