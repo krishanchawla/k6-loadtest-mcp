@@ -2,9 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
+  <script th:src="@{/js/theme.js}"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title th:text="${run.name + ' – loadtest-dashboard'}">Run</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect x='1' y='9' width='4' height='8' rx='1' fill='%232a78d6'/%3E%3Crect x='7' y='4' width='4' height='13' rx='1' fill='%232a78d6'/%3E%3Crect x='13' y='1' width='4' height='16' rx='1' fill='%232a78d6'/%3E%3C/svg%3E"/>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='24' y2='24'%3E%3Cstop offset='0%25' stop-color='%232a78d6'/%3E%3Cstop offset='100%25' stop-color='%231d5aa8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='7' fill='url(%23g)'/%3E%3Crect x='6' y='14' width='3.2' height='5' rx='1.6' fill='%23fff' opacity='0.6'/%3E%3Crect x='10.4' y='9' width='3.2' height='10' rx='1.6' fill='%23fff' opacity='0.85'/%3E%3Crect x='14.8' y='4' width='3.2' height='15' rx='1.6' fill='%23fff'/%3E%3C/svg%3E"/>
   <link rel="stylesheet" th:href="@{/css/dashboard.css}"/>
 </head>
 <body>
@@ -13,35 +14,34 @@
 <main class="container">
   <p class="breadcrumb"><a th:href="@{/}">← All runs</a></p>
 
-  <div class="card">
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+  <div class="hero">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:14px;">
       <div>
-        <h1 style="margin:0 0 4px; font-size:22px; letter-spacing:-0.01em;" th:text="${run.name}"></h1>
-        <div style="color:var(--text-muted); font-size:13.5px;">
-          <span th:text="${run.baseUrl}"></span> ·
-          <span th:text="${run.startedAtRelative}"></span> ·
-          <span th:text="${run.startedAtDisplay}"></span>
+        <div class="eyebrow" th:text="${run.baseUrl}">target</div>
+        <h1 class="page-title" th:text="${run.name}"></h1>
+        <div style="color:var(--text-muted); font-size:13px; margin-top:4px;">
+          <span th:text="${run.startedAtRelative}"></span> · <span th:text="${run.startedAtDisplay}"></span>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
         <span th:if="${run.thresholdsPassed}" class="badge good">✓ all thresholds passed</span>
         <span th:unless="${run.thresholdsPassed}" class="badge critical">✗ threshold(s) failed</span>
-        <button class="icon-btn" type="button" onclick="navigator.clipboard.writeText(window.location.href); this.textContent='Copied';">
+        <button class="btn btn-accent" type="button" onclick="navigator.clipboard.writeText(window.location.href); this.textContent='Copied';">
           Copy link
         </button>
       </div>
     </div>
 
-    <div class="stat-row" style="margin-top:20px;">
+    <div class="stat-row" style="margin-top:22px; margin-bottom:0; box-shadow:none;">
       <div class="stat-tile">
         <div class="label">p95 latency</div>
-        <div class="value" th:text="${run.p95Ms != null ? #numbers.formatDecimal(run.p95Ms, 1, 1) + ' ms' : '—'}"></div>
+        <div class="value" th:text="${run.p95Ms != null ? #numbers.formatDecimal(run.p95Ms, 1, 1) + 'ms' : '—'}"></div>
       </div>
       <div class="stat-tile">
         <div class="label">Avg latency</div>
-        <div class="value" th:text="${run.avgMs != null ? #numbers.formatDecimal(run.avgMs, 1, 1) + ' ms' : '—'}"></div>
+        <div class="value" th:text="${run.avgMs != null ? #numbers.formatDecimal(run.avgMs, 1, 1) + 'ms' : '—'}"></div>
       </div>
-      <div class="stat-tile">
+      <div class="stat-tile" th:classappend="${run.errorRatePct > 0} ? 'stat-tile-critical' : 'stat-tile-good'">
         <div class="label">Error rate</div>
         <div class="value" th:text="${#numbers.formatDecimal(run.errorRatePct, 1, 2) + '%'}"></div>
       </div>
@@ -63,7 +63,7 @@
       </div>
     </div>
 
-    <div th:if="${previous != null}" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--gridline); display:flex; flex-wrap:wrap; align-items:center; gap:18px;">
+    <div th:if="${previous != null}" style="margin-top:20px; padding-top:18px; border-top:1px solid var(--gridline); display:flex; flex-wrap:wrap; align-items:center; gap:18px;">
       <div style="color:var(--text-muted); font-size:12.5px;">
         vs. <a th:href="@{/runs/{id}(id=${previous.id})}" th:text="${previous.startedAtRelative}"></a>
       </div>
@@ -132,5 +132,7 @@
     </div>
   </div>
 </main>
+
+<div th:replace="~{fragments/nav :: footer}"></div>
 </body>
 </html>

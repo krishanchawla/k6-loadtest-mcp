@@ -1,191 +1,356 @@
-/* Palette + mark-spec choices follow the project's dataviz skill: fixed categorical order (only
-   slot 1 "blue" is used here -- a single series never needs more), status colors reserved for
-   pass/fail state, delta colors for trend deltas, thin marks (<=24px bars) with rounded data-ends
-   anchored to a baseline. Light theme by default; dark follows prefers-color-scheme, same ramps
-   re-stepped. */
+/* ============================================================================================
+   dashboard-kit -- shared visual language for this portfolio's AI-agent dashboards
+   (ci-triage-dashboard first; this is the second to adopt it -- see that file's own header
+   comment for the full "what's shared / what's per-app" split, restated briefly here).
+
+   What's SHARED (same as ci-triage-dashboard, copied structurally): the token *names*, the
+   header/footer layout (gradient hairline, brand block, theme toggle), every component below
+   "COMPONENTS". What's PER-APP: the --accent value (this app's own blue, distinct from
+   ci-triage-dashboard's violet) and the header's brand mark -- same "ascending bars" motif this
+   project already had before the redesign, just elevated into the shared badge treatment, since
+   it happens to fit a load-test tool even better than it fit CI triage (rising bars = ramping
+   load). Categorical palette below stays a single series (--series-1) -- this app never needed
+   more than one, unlike ci-triage-dashboard's 7-slot category palette -- but status/delta colors
+   follow the same dataviz-skill reference values both apps share. */
+
 :root {
   color-scheme: light;
+
+  /* -- App accent (PER-APP: this app's own blue) -- */
+  --accent: #2a78d6;
+  --accent-wash: rgba(42, 120, 214, 0.10);
+  --accent-strong: #1d5aa8;
+
+  /* -- Surfaces -- */
+  --page-plane: #f9f9f7;
   --surface-1: #fcfcfb;
   --surface-2: #f4f3f0;
-  --page-plane: #f9f9f7;
+
+  /* -- Mesh wash: two stops of --accent only -- fixed behind the whole page so the product reads
+     as one designed surface, not a flat plane with one decorated card at the top. -- */
+  --mesh-1: rgba(42, 120, 214, 0.08);
+  --mesh-2: rgba(29, 90, 168, 0.05);
+
+  /* -- Ink -- */
   --text-primary: #0b0b0b;
   --text-secondary: #52514e;
   --text-muted: #898781;
+
+  /* -- Structure -- */
   --gridline: #e1e0d9;
   --baseline: #c3c2b7;
   --border: rgba(11, 11, 11, 0.09);
-  --shadow: rgba(20, 20, 15, 0.06);
-  --series-1: #2a78d6;
-  --series-1-wash: rgba(42, 120, 214, 0.08);
+  --border-strong: rgba(11, 11, 11, 0.14);
+
+  /* -- Elevation -- */
+  --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.05);
+  --shadow-md: 0 1px 2px rgba(11, 11, 11, 0.04), 0 12px 28px -12px rgba(11, 11, 11, 0.16);
+  --shadow-lg: 0 4px 10px -2px rgba(11, 11, 11, 0.10), 0 24px 48px -16px rgba(11, 11, 11, 0.22);
+
+  /* -- Single series (this app never needs more than one) -- */
+  --series-1: var(--accent);
+  --series-1-wash: var(--accent-wash);
+
+  /* -- Status (fixed, never themed) -- */
   --status-good: #0ca30c;
   --status-good-wash: rgba(12, 163, 12, 0.12);
   --status-critical: #d03b3b;
   --status-critical-wash: rgba(208, 59, 59, 0.12);
+
+  /* -- Delta (trend vs. previous run) -- */
   --delta-good: #006300;
   --delta-bad: #d03b3b;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
+    --accent: #5b9ee8;
+    --accent-wash: rgba(91, 158, 232, 0.16);
+    --accent-strong: #8bbcf0;
+
+    --page-plane: #0d0d0d;
     --surface-1: #1a1a19;
     --surface-2: #212120;
-    --page-plane: #0d0d0d;
+    --mesh-1: rgba(91, 158, 232, 0.10);
+    --mesh-2: rgba(139, 188, 240, 0.05);
+
     --text-primary: #ffffff;
     --text-secondary: #c3c2b7;
     --text-muted: #898781;
+
     --gridline: #2c2c2a;
     --baseline: #383835;
     --border: rgba(255, 255, 255, 0.09);
-    --shadow: rgba(0, 0, 0, 0.35);
-    --series-1: #3987e5;
-    --series-1-wash: rgba(57, 135, 229, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.14);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 4px 10px -2px rgba(0, 0, 0, 0.4), 0 24px 48px -16px rgba(0, 0, 0, 0.6);
+
+    --series-1: var(--accent);
+    --series-1-wash: var(--accent-wash);
+
     --status-good: #0ca30c;
-    --status-good-wash: rgba(12, 163, 12, 0.16);
+    --status-good-wash: rgba(12, 163, 12, 0.18);
     --status-critical: #e66767;
-    --status-critical-wash: rgba(230, 103, 103, 0.16);
+    --status-critical-wash: rgba(230, 103, 103, 0.18);
+
     --delta-good: #0ca30c;
     --delta-bad: #e66767;
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --accent: #5b9ee8;
+  --accent-wash: rgba(91, 158, 232, 0.16);
+  --accent-strong: #8bbcf0;
+  --page-plane: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #212120;
+  --mesh-1: rgba(91, 158, 232, 0.10);
+  --mesh-2: rgba(139, 188, 240, 0.05);
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 4px 10px -2px rgba(0, 0, 0, 0.4), 0 24px 48px -16px rgba(0, 0, 0, 0.6);
+  --series-1: var(--accent);
+  --series-1-wash: var(--accent-wash);
+  --status-good: #0ca30c; --status-good-wash: rgba(12, 163, 12, 0.18);
+  --status-critical: #e66767; --status-critical-wash: rgba(230, 103, 103, 0.18);
+  --delta-good: #0ca30c; --delta-bad: #e66767;
+}
+
+/* ============================================================================================
+   BASE
+   ============================================================================================ */
 
 * { box-sizing: border-box; }
+
+html { color-scheme: light; }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px circle at 12% -8%, var(--mesh-1), transparent 55%),
+    radial-gradient(700px circle at 100% 18%, var(--mesh-2), transparent 50%);
+}
 
 body {
   margin: 0;
   background: var(--page-plane);
   color: var(--text-primary);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.6 "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a { color: var(--series-1); text-decoration: none; }
+a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* -- Header ---------------------------------------------------------------------------------- */
+svg { display: block; }
+
+/* ============================================================================================
+   SITE HEADER / FOOTER -- gradient hairline is this project's half of the shared brand signature
+   with ci-triage-dashboard's header (same treatment, each app's own --accent).
+   ============================================================================================ */
 
 .site-header {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
-  position: relative;
+  box-shadow: 0 1px 0 var(--border), var(--shadow-sm);
 }
 .site-header::before {
-  /* a single quiet touch of brand color -- not a banner, just a hairline */
   content: "";
   display: block;
   height: 3px;
-  background: linear-gradient(90deg, var(--series-1), color-mix(in srgb, var(--series-1) 40%, transparent));
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
 }
 .site-header .inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 18px 24px;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
+  max-width: 1120px; margin: 0 auto; padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
 }
+.site-header .brand-block { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .site-header .brand {
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -0.01em;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: inline-flex; align-items: center; gap: 10px;
+  font-weight: 800; font-size: 18.5px; letter-spacing: -0.015em; color: var(--text-primary);
 }
-.site-header .brand svg { flex: none; }
-.site-header .tagline { color: var(--text-muted); font-size: 13px; }
+.site-header .brand:hover { text-decoration: none; }
+.site-header .brand svg.brand-mark { flex: none; filter: drop-shadow(0 2px 5px var(--accent-wash)); }
+.site-header .tagline { font-size: 13px; color: var(--text-muted); padding-left: 12px; border-left: 1px solid var(--border); }
 
-/* -- Layout ------------------------------------------------------------------------------------ */
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface-1); color: var(--text-secondary); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface-2); color: var(--text-primary); }
+.theme-toggle svg { flex: none; }
 
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 28px 24px 48px;
+.site-footer { border-top: 1px solid var(--border); margin-top: 48px; }
+.site-footer-inner {
+  max-width: 1120px; margin: 0 auto; padding: 20px 24px 32px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--text-muted);
+}
+.site-footer-inner a { color: var(--text-secondary); font-weight: 500; }
+.site-footer-inner a:hover { color: var(--accent); }
+
+/* ============================================================================================
+   LAYOUT
+   ============================================================================================ */
+
+.container { max-width: 1120px; margin: 0 auto; padding: 40px 24px 56px; }
+
+.eyebrow { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-strong); }
+.page-title { margin: 4px 0 0; font-size: 34px; font-weight: 800; letter-spacing: -0.025em; color: var(--text-primary); }
+
+.breadcrumb { font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; }
+.breadcrumb a { color: var(--text-secondary); font-weight: 500; }
+.breadcrumb a:hover { color: var(--accent); }
+
+/* ============================================================================================
+   MOTION
+   ============================================================================================ */
+
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.hero, .overview-strip, .stat-row, .card { animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .hero, .overview-strip, .stat-row, .card { animation: none !important; }
 }
 
-.breadcrumb {
-  font-size: 13.5px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
+/* ============================================================================================
+   HERO -- the page's opening block (list/detail headers). A soft radial accent wash plus a faint
+   dot grid, same treatment as ci-triage-dashboard's hero, so the top of every page has one
+   confident visual moment instead of reading as another gray box in a stack of gray boxes.
+   ============================================================================================ */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md);
+  padding: 34px 36px;
+  margin-bottom: 22px;
 }
-.breadcrumb a { color: var(--text-secondary); }
-.breadcrumb a:hover { color: var(--series-1); }
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(620px circle at 88% -16%, var(--accent-wash), transparent 60%),
+    radial-gradient(360px circle at -6% 118%, var(--accent-wash), transparent 55%);
+  pointer-events: none;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(480px circle at 88% -16%, black, transparent 70%);
+  mask-image: radial-gradient(480px circle at 88% -16%, black, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.hero > * { position: relative; }
+
+/* ============================================================================================
+   COMPONENTS
+   ============================================================================================ */
 
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow), 0 1px 1px var(--shadow);
-  padding: 22px 24px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px;
   margin-bottom: 20px;
 }
 
 .card h2 {
-  margin: 0 0 16px;
-  font-size: 13px;
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 18px;
+  font-size: 12.5px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 700;
 }
+.card h2::before {
+  content: "";
+  width: 3px; height: 12px; border-radius: 2px; flex: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+}
 
-/* -- Overview strip (list page) ----------------------------------------------------------------- */
+/* -- Overview strip (list page) + stat-row (detail page) -- same KPI-tile component, two names
+   for the two places it's used, matching ci-triage-dashboard's .overview-strip. -- */
 
-.overview-strip {
+.overview-strip, .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1px;
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
 }
-.overview-strip .stat-tile {
-  background: var(--surface-1);
-  padding: 18px 20px;
-  margin: 0;
-}
-
-/* -- Stat tiles (shared) ------------------------------------------------------------------------ */
-
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.stat-tile { background: var(--surface-1); padding: 16px 18px; }
-.stat-tile .label { color: var(--text-muted); font-size: 12.5px; }
-.stat-tile .value { font-size: 25px; font-weight: 600; margin-top: 3px; letter-spacing: -0.01em; }
+.overview-strip { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* stat-row (detail page) can carry up to 7 tiles -- a narrower minmax than overview-strip's so
+   they still fit one row at typical widths instead of one tile wrapping alone onto an otherwise-
+   empty second row. */
+.stat-row { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+.stat-tile { background: var(--surface-1); padding: 20px 22px; margin: 0; }
+.stat-tile .label { color: var(--text-muted); font-size: 12px; }
+.stat-tile .value { font-size: 30px; font-weight: 800; margin-top: 8px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stat-tile .value small { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 
-/* -- Filters -------------------------------------------------------------------------------------- */
+/* Color-coded tiles -- same idea as ci-triage-dashboard's per-metric icon-badge colors, applied
+   via a modifier class on the tile itself since these tiles don't carry a separate icon badge. */
+.stat-tile.stat-tile-good .value { color: var(--status-good); }
+.stat-tile.stat-tile-critical .value { color: var(--status-critical); }
 
-.filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
+/* -- Filters -- */
+
+.filters { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .filters label { color: var(--text-muted); font-size: 13.5px; }
 .filters select {
   font: inherit;
-  padding: 7px 10px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  border-radius: 9px;
   border: 1px solid var(--border);
   background: var(--surface-1);
   color: var(--text-primary);
 }
-.filters select:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
+.filters select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* -- Table ------------------------------------------------------------------------------------------ */
+/* -- Table -- */
 
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td {
   text-align: left;
-  padding: 12px 14px;
+  padding: 13px 14px;
   border-bottom: 1px solid var(--gridline);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+th { color: var(--text-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
 tr:last-child td { border-bottom: none; }
 
 tr.run-row { border-left: 3px solid transparent; }
@@ -195,38 +360,33 @@ tr.run-row:hover td { background: var(--surface-2); }
 tr.run-row td:first-child { font-weight: 600; }
 
 .run-time .relative { color: var(--text-primary); }
-.run-time .absolute { display: block; color: var(--text-muted); font-size: 12px; margin-top: 1px; }
+.run-time .absolute { display: block; color: var(--text-muted); font-size: 11.5px; margin-top: 1px; }
 
-/* -- Badges ------------------------------------------------------------------------------------------ */
+/* -- Badges -- */
 
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12.5px;
-  font-weight: 600;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
 }
 .badge.good { color: var(--status-good); background: var(--status-good-wash); }
 .badge.critical { color: var(--status-critical); background: var(--status-critical-wash); }
 
-/* -- Delta -------------------------------------------------------------------------------------------- */
+/* -- Delta -- */
 
-.delta { font-size: 13px; font-weight: 600; }
+.delta { font-size: 13px; font-weight: 700; }
 .delta.better { color: var(--delta-good); }
 .delta.worse { color: var(--delta-bad); }
 .delta.flat { color: var(--text-muted); }
 
-/* -- Latency percentile bar chart -- single series (categorical slot 1), thin marks (<=24px),
-   rounded data-ends anchored to the baseline, native hover tooltip via title attr ------------------ */
+/* -- Latency percentile bar chart -- single series (--accent), thin marks with rounded data-ends
+   anchored to the baseline, entrance animation so the page reads as designed rather than a
+   static default chart. Native hover tooltip via the existing title attribute. -------------- */
 
 .bar-chart {
   display: flex;
   align-items: flex-end;
   gap: 28px;
-  height: 150px;
+  height: 160px;
   padding: 8px 8px 0;
   border-bottom: 2px solid var(--baseline);
 }
@@ -240,38 +400,78 @@ tr.run-row td:first-child { font-weight: 600; }
   justify-content: flex-end;
 }
 .bar-chart .bar {
-  width: 22px;
+  width: 24px;
   min-height: 3px;
-  background: var(--series-1);
-  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  border-radius: 6px 6px 0 0;
+  box-shadow: 0 6px 14px -6px var(--accent-wash);
+  animation: grow-bar 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.05s;
 }
-.bar-chart .bar-value { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+@keyframes grow-bar {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-chart .bar { animation: none; }
+}
+.bar-chart .bar-value { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 6px; font-variant-numeric: tabular-nums; font-weight: 600; }
 .bar-chart .bar-label { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
-.chart-caption { margin-top: 12px; color: var(--text-muted); font-size: 13px; }
-.chart-caption b { color: var(--text-secondary); font-weight: 600; }
+.chart-caption { margin-top: 14px; color: var(--text-muted); font-size: 13px; }
+.chart-caption b { color: var(--text-secondary); font-weight: 700; }
 
-/* -- Inline magnitude bar used in the per-endpoint table --------------------------------------------- */
+/* -- Inline magnitude bar used in the per-endpoint table -- */
 
-.mini-bar-track { background: var(--gridline); border-radius: 4px; height: 8px; width: 100%; min-width: 80px; }
-.mini-bar-fill { background: var(--series-1); border-radius: 4px; height: 100%; }
+.mini-bar-track { background: var(--gridline); border-radius: 5px; height: 8px; width: 100%; min-width: 80px; }
+.mini-bar-fill {
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  border-radius: 5px; height: 100%;
+  animation: grow-fill 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes grow-fill { from { width: 0 !important; } }
+@media (prefers-reduced-motion: reduce) { .mini-bar-fill { animation: none; } }
 
-/* -- Misc ------------------------------------------------------------------------------------------------- */
+/* -- Buttons -- */
 
-.pagination { display: flex; gap: 12px; margin-top: 16px; font-size: 13.5px; color: var(--text-muted); }
-.empty-state { color: var(--text-muted); padding: 32px 0; text-align: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface-1); color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.btn:hover { background: var(--surface-2); color: var(--text-primary); text-decoration: none; }
+.btn.btn-accent {
+  background: linear-gradient(155deg, var(--accent), var(--accent-strong));
+  border-color: var(--accent-strong); color: #fff;
+  box-shadow: 0 4px 12px -4px var(--accent-wash), var(--shadow-sm);
+}
+.btn.btn-accent:hover { filter: brightness(1.08); }
 
+/* Back-compat alias -- existing templates use .icon-btn for the same role as .btn. */
 .icon-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface-1); color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text-primary); }
 .icon-btn svg { flex: none; }
+
+/* -- Misc -- */
+
+.pagination { display: flex; gap: 12px; margin-top: 18px; font-size: 13px; color: var(--text-muted); align-items: center; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-muted); padding: 56px 20px; text-align: center; }
+.empty-state code { background: var(--surface-2); padding: 2px 7px; border-radius: 5px; font-size: 12.5px; }
+
+/* ============================================================================================
+   RESPONSIVE
+   ============================================================================================ */
+
+@media (max-width: 760px) {
+  .site-header .inner { padding: 14px 18px; }
+  .site-header .tagline { display: none; }
+  .container { padding: 24px 18px 48px; }
+  .site-footer-inner { padding: 18px 18px 28px; }
+}
