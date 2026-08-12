@@ -56,9 +56,11 @@ public class RunIngestController {
 
     /**
      * Self-host default: DASHBOARD_DEMO_TARGET_HOST unset -- any baseUrl accepted, unrestricted, same
-     * as before this existed. Public-demo mode: only that pinned host/port is accepted -- this is the
-     * real guard against the dashboard being used as an anonymous load-testing egress point once the
-     * bearer token is public (see README "Public demo mode"), not the token itself.
+     * as before this existed. Public-demo mode: only the pinned host(s)/port(s) are accepted -- this is
+     * the real guard against the dashboard being used as an anonymous load-testing egress point once the
+     * bearer token is public (see README "Public demo mode"), not the token itself. Comma-separated to
+     * allow more than one legitimate demo target at once (e.g. a standalone demo-api host alongside
+     * other self-hosted apps sharing the same box).
      */
     private void assertAllowedTarget(String baseUrl) {
         if (demoTargetHost == null || demoTargetHost.isBlank()) return;
@@ -69,7 +71,14 @@ public class RunIngestController {
         } catch (URISyntaxException | NullPointerException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid baseUrl");
         }
-        if (!actual.equalsIgnoreCase(demoTargetHost)) {
+        boolean allowed = false;
+        for (String host : demoTargetHost.split(",")) {
+            if (actual.equalsIgnoreCase(host.trim())) {
+                allowed = true;
+                break;
+            }
+        }
+        if (!allowed) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "This dashboard only accepts runs against " + demoTargetHost);

@@ -286,7 +286,7 @@ Run it (e.g. via systemd) with these env vars set:
 | `DASHBOARD_PUBLIC_BASE_URL` | yes, for correct links | The externally visible base URL (e.g. `https://loadtest.yourdomain.com`), used to build the shareable links `publish_report` returns. |
 | `DASHBOARD_PORT` | no (default `8080`) | Port the embedded server listens on. |
 | `DASHBOARD_DATA_DIR` | no (default `~/.k6-loadtest-mcp/dashboard`) | Where the H2 database file lives. |
-| `DASHBOARD_DEMO_TARGET_HOST` | no | [Public demo mode](#public-demo-mode) only — pins accepted `baseUrl`s to one host\[:port\]. Unset = any target accepted (the private-use default). |
+| `DASHBOARD_DEMO_TARGET_HOST` | no | [Public demo mode](#public-demo-mode) only — pins accepted `baseUrl`s to one or more hosts\[:port\] (comma-separated). Unset = any target accepted (the private-use default). |
 | `DASHBOARD_RETENTION_DAYS` | no (default `0` = off) | [Public demo mode](#public-demo-mode) only — auto-deletes runs older than N days, daily. `0`/unset = keep forever (the private-use default). |
 
 ```bash
@@ -323,14 +323,15 @@ java -jar /opt/loadtest-dashboard/loadtest-dashboard.jar
 
 Two more things this posture needs that the default doesn't:
 
-1. **Pick one target you're certain can take anonymous concurrent traffic**, and point
-   `DASHBOARD_DEMO_TARGET_HOST` at it. Two ways to get one: deploy `demo/demo-api.mjs` (bundled with
-   this repo — in-memory, no real data, built for exactly this) on your own box, or reuse an existing
-   sandbox you already control, the way [the live demo above](#try-the-live-public-demo) pins to
-   `playground.krishanchawla.com` — a practice API sandbox that already existed, not something stood
-   up just for this. Either way, `DASHBOARD_DEMO_TARGET_HOST` checks host (and port, if given) only,
-   not path — pinning to a host opens *everything* currently (and later) served from it, not just the
-   one endpoint you had in mind.
+1. **Pick one or more targets you're certain can take anonymous concurrent traffic**, and point
+   `DASHBOARD_DEMO_TARGET_HOST` at them (comma-separated for more than one). Two ways to get a target:
+   deploy `demo/demo-api.mjs` (bundled with this repo — in-memory, no real data, built for exactly
+   this) on your own box, or reuse an existing sandbox you already control, the way [the live demo
+   above](#try-the-live-public-demo) pins to `playground.krishanchawla.com,projects.krishanchawla.com`
+   — a practice API sandbox plus the same box's other self-hosted demo apps. Either way,
+   `DASHBOARD_DEMO_TARGET_HOST` checks host (and port, if given) only, not path — pinning to a host
+   opens *everything* currently (and later) served from it, not just the one endpoint you had in mind,
+   so only add hosts you're comfortable being fully open this way.
 2. **Rate-limit and cap the ingest endpoint at the nginx layer** — the in-app payload check
    (`ApiTokenFilter`) only catches requests that send a `Content-Length` header; nginx enforces it
    properly regardless of encoding, and rate limiting isn't something to reinvent in application code
