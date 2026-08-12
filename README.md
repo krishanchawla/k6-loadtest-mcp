@@ -228,7 +228,7 @@ down) works exactly the same way, just gated behind your own login instead of op
 
 ### Try the live public demo
 
-There's a real instance running at **[projects.krishanchawla.com/loadtest-dashboard](https://projects.krishanchawla.com/loadtest-dashboard/)**
+There's a real instance running at **[projects.krishanchawla.com/ai/loadtest-dashboard](https://projects.krishanchawla.com/ai/loadtest-dashboard/)**
 — open to read without a login, and open to publish to as well, pinned to one target so it can't be
 used as a general-purpose load-testing egress point (see [Public demo mode](#public-demo-mode) for
 what that means). Point your own `k6-loadtest-mcp` at it:
@@ -240,7 +240,7 @@ what that means). Point your own `k6-loadtest-mcp` at it:
    ```
 2. Add the dashboard URL to that same file:
    ```json
-   { "dashboardUrl": "https://projects.krishanchawla.com/loadtest-dashboard" }
+   { "dashboardUrl": "https://projects.krishanchawla.com/ai/loadtest-dashboard" }
    ```
    Then set the publish token **on the MCP server's own registration**, not as a plain shell env
    var — see [Register with Claude Desktop / Claude Code](#register-with-claude-desktop--claude-code)
@@ -258,7 +258,7 @@ what that means). Point your own `k6-loadtest-mcp` at it:
    > `{"username": "standard_user", "password": "Password123!"}`, ramp to 20 users over 20s.
 4. Claude will notice a dashboard is configured and ask if you want this run published — say yes
    (or just ask directly) and you'll get back a real
-   `projects.krishanchawla.com/loadtest-dashboard/runs/{id}` link, live for anyone to open.
+   `projects.krishanchawla.com/ai/loadtest-dashboard/runs/{id}` link, live for anyone to open.
 
 Published runs are pruned after 3 days — it's a demo, not permanent storage. Only
 `playground.krishanchawla.com` is accepted as a target; anything else gets a `403`.
